@@ -10,7 +10,6 @@ Available APIs:
         - CAUTION: "startPoint", "destination", "title", "from" fields are always required.
      - returns { "result": 1 } for success
      - returns { "result": 0 } for database failure
-     - returns { "result": 2 } if an account with given kakaoId already exists.
                            
   - GET  : /api/quest
      - Retrieves all quests on database.
@@ -26,6 +25,7 @@ Available APIs:
         - CAUTION : "kakaoId" field is always required.
      - returns { "result": 1 } for success
      - returns { "result": 0 } for failure
+     - returns { "result": 2 } if an account with given kakaoId already exists.
   
   - GET  : /api/account 
      - Retrieves all accounts on database.
