@@ -21,6 +21,6 @@ Available APIs:
   - GET  : /api/account 
      - Retrieves all accounts on database.
   
-  - GET  : /api/account/kakaoId/<id>
-	 - Retrieves an account which kakaoId is <id>.
+  - GET  : /api/account/kakaoId/[id]
+	 - Retrieves an account which kakaoId is [id].
      - returns 404 (NOT FOUND) error with { "error": "no such account" } if the account with given kakaoId does not exist.
