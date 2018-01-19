@@ -13,7 +13,12 @@ Available APIs:
                            
   - GET  : /api/quest
      - Retrieves all quests on database.
-  
+        - OPTION: Use "sortBy" field to retrieve sorted data
+        - OPTION: Use fields to filter data
+        
+        - e.g. { "sortBy": "title" } will sort quests using its title
+        - e.g. { "startPoint": [start], "sortBy": "title" } will retrieve quests whose "startPoint" field is [start], and the result will be sorted by title
+ 
   - POST : /api/account                
      - Adds new account on database. Check models/account.js for details.
         - CAUTION : data other than "kakaoId" is automatically initialized in server.
