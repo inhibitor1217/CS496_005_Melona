@@ -123,7 +123,7 @@ app.post('/api/quest', function(req, res) {
 //
 // - update : Quest.state (Matched = 2)
 //            Quest.to
-//            Account.uploadedQuests
+//            Account.acceptedQuests
 app.put('/api/accept', function(req, res) {
 
 	if(req.body.questId == undefined) {
@@ -174,6 +174,7 @@ app.put('/api/accept', function(req, res) {
 					res.json( { result : 0 } ); // failed : db error
 					return;
 				}
+				accounts.acceptedQuests.push(quests.id);
 				accounts.save(function(err) {
 					if(err) {
 						res.json( { result : 0 } ); // failed : db error
