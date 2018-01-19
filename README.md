@@ -16,7 +16,7 @@ Available APIs:
   - POST : /api/account                
      - Adds new account on database. Check models/account.js for details.
      	- CAUTION : data other than "kakaoId" is automatically initialized in server.
-     - returns { "result": 1 } for success
+      - returns { "result": 1 } for success
      - returns { "result": 0 } for failure
   
   - GET  : /api/account 
