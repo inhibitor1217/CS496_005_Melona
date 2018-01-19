@@ -12,6 +12,7 @@ Available APIs:
      - returns { "result": 1 } for success
      - returns { "result": 0 } for database failure
      - returns { "result": 2 } if there is no such account of kakaoId "from".
+     - returns { "result": 3 } if account of kakaoId "from" has not enough coin
                            
   - GET  : /api/quest
      - Retrieves all quests on database.
