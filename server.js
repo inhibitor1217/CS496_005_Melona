@@ -59,10 +59,6 @@ app.post('/api/quest', function(req, res) {
 		res.json({result: "field \'from\' is not defined"});
 		return;
 	}
-	if(req.body.to == undefined) {
-		res.json({result: "field \'to\' is not defined"});
-		return;
-	}
 
 	quest.startPoint  = req.body.startPoint;
 	quest.destination = req.body.destination;
@@ -73,7 +69,7 @@ app.post('/api/quest', function(req, res) {
 	quest.text        = text;
 	quest.state       = 0;
 	quest.from        = req.body.from;
-	quest.to          = req.body.to;
+	quest.to          = "";
 
 	quest.save(function(err) {
 		if(err) {
@@ -180,6 +176,16 @@ app.delete('/api/accountDel/:id', function(req, res) {
 		res.status(204).end();
 	});
 });
+
+// accept quest
+// - update quest : state
+//                : to
+// 
+
+// give up quest
+
+
+// 
 
 var server = app.listen(port, function() {
 	console.log("Express server has started on port " + port);
