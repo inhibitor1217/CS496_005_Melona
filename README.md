@@ -32,6 +32,24 @@ Available APIs:
      - returns { "result": 3 } if the quest is already matched or completed.
      - returns { "result": 4 } if there is no such account of kakaoId "accountId".
      - returns { "result": 5 } if the account accepting the quest is the uploader of the quest.
+     
+  - PUT  : /api/giveup
+     - Give up a quest accepted previously.
+     - Still working on
+  
+  - PUT  : /api/withdraw
+     - Withdraw a quest posted previously.
+     - Still working on
+     
+  - PUT  : /api/complete
+     - Confirm a posted quest to be completed.
+     - This API is used on uploader's account.
+     - Still working on
+     
+  - PUT  : /api/reward
+     - Receive reward of a completed quest.
+     - This API is used on receiver's account.
+     - Still working on
  
   - POST : /api/account                
      - Adds new account on database. Check models/account.js for details.
