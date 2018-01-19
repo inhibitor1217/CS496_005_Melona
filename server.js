@@ -22,9 +22,11 @@ var port = process.env.PORT || 8080;
 var Quest   = require('./models/quest');
 var Account = require('./models/account');
 
+// TODO
+// [ Use TCP Socket for real-time connection! ]
+
 // post new quest
 app.post('/api/quest', function(req, res) {
-	var quest = new Quest();
 
 	var coinReward = 0;
 	var expReward = 0;
@@ -62,12 +64,20 @@ app.post('/api/quest', function(req, res) {
 
 	Account.findOne( { kakaoId: req.body.from }, function(err, accounts) {
 
-		if(err) return res.status(500).json({error: 'database failure'});
+		if(err) {
+			res.json({result: 0}) // failed : db error
+			return;
+		}
 		if(accounts == null) {
 			res.json({result: 2}); // failed: invalid account id
 			return;
 		}
+		if(accounts.coin < coinReward) {
+			res.json({result: 3}); // failed: not enough coin
+			return;
+		}
 
+		var quest = new Quest();
 		quest.startPoint  = req.body.startPoint;
 		quest.destination = req.body.destination;
 		quest.coinReward  = coinReward;
@@ -101,26 +111,117 @@ app.post('/api/quest', function(req, res) {
 
 });
 
-
 // accept quest
-// - update Quest : state (Matched = 2)
-//                : to
-// - update Account : uploadedQuests
+//
+// - required fields : Quest._id
+//                     Account.kakaoId
+//
+// - assert : Quest with Quest._id exists
+//            Quest.state is "In Queue"
+//            Quest.from is not Account.kakaoId
+//            Account with field Account.kakaoId exists
+//
+// - update : Quest.state (Matched = 2)
+//            Quest.to
+//            Account.uploadedQuests
+app.put('/api/accept', function(req, res) {
+
+	if(req.body.questId == undefined) {
+		res.json({ error: "field \'questId\' is not defined" });
+		return;
+	}
+	if(req.body.accountId == undefined) {
+		res.json({ error: "field \'accountId\' is not defined" });
+		return;
+	}
+
+
+	Quest.findOne( { _id: req.body.questId }, function(err, quests) {
+
+		if(err) {
+			res.json( { result : 0 } ); // failed : db error
+			return;
+		}
+		if(quests == undefined) {
+			res.json( { result : 2 } ); // failed : no such quest
+			return;
+		}
+		if(quests.state != 1) {
+			res.json( { result : 3 } ); // failed : quest is already matched or completed
+			return;
+		}
+
+		Account.findOne( { kakaoId: req.body.accountId }, function(err, accounts) {
+
+			if(err) {
+				res.json( { result : 0 } ); // failed : db error
+				return;
+			}
+			if(accounts == undefined) {
+				res.json( { result : 4 } ); // failed : no such account
+				return;
+			}
+			if(quests.from == accounts.kakaoId) {
+				res.json( { result : 5 } ); // failed : uploader should not accept quest
+				return;
+			}
+
+			quests.state = 2;
+			quests.to = accounts.kakaoId;
+
+			quests.save(function(err) {
+				if(err) {
+					res.json( { result : 0 } ); // failed : db error
+					return;
+				}
+				accounts.save(function(err) {
+					if(err) {
+						res.json( { result : 0 } ); // failed : db error
+						return;
+					}
+					res.json( { result : 1 } ); // success
+				});
+			})
+
+		} );
+
+	} );
+
+});
 
 // give up quest
-// - update Quest : state (Matched = 1)
-//                : to
-// - update Account : acceptedQuests
-//                ( : coin, exp )
+//
+// - required fields : Quest._id
+//                     Account.kakaoId
+//
+// - assert : Quest with Quest._id exists
+//            Quest.state is "Matched"
+//            Account with Account.kakaoId exists
+//            Account.kakaoId == Quest.to
+//
+// - update : Quest.state (Matched = 1)
+//            Quest.to
+//            Account.acceptedQuests
+//            Account.coin
+//            Account.exp
+
 
 // withdraw quest
+//
+// - required fields : Quest._id
+//                     Account.kakaoId
+//
+// - assert : Quest with Quest._id exists
+//            Quest.state is "In Queue" or "Matched"
+//            Account with Account.kakaoId exists
+//
 // - delete Quest
-// - update Account : uploadedQuests
+// - update : Account.uploadedQuests
+
 
 // complete quest
 // - update Quest : state (Completed = 3)
 // - update Account : uploadedQuests
-//                  : coin
 // - update Account : acceptedQuests
 //                  : completedQuests
 //                  : coin
@@ -134,12 +235,12 @@ app.get('/api/quest', function(req, res) {
 	delete req.body["sortBy"];
 
 	if(sortBy == undefined) {
-		Quest.find( req.body, { "_id": false }, function(err, quests) {
+		Quest.find( req.body, function(err, quests) {
 			if(err) return res.status(500).send({error: 'database failure'});
 			res.json(quests);
 		});
 	} else {
-		Quest.find( req.body, { "_id": false } ).sort(sortBy).exec(function(err, quests) {
+		Quest.find( req.body ).sort(sortBy).exec(function(err, quests) {
 			if(err) return res.status(500).send({error: 'database failure'});
 			res.json(quests);
 		});
@@ -231,6 +332,14 @@ app.delete('/api/accountDel', function(req, res) {
 // delete account by id
 app.delete('/api/accountDel/:id', function(req, res) {
 	Account.remove({ _id: req.params.id }, function(err, output) {
+		if(err) return res.status(500).json({error: 'database failure'});
+		res.status(204).end();
+	});
+});
+
+// delete account by kakaoId
+app.delete('/api/account/kakaoId/:id', function(req, res) {
+	Account.remove({ kakaoId: req.params.id }, function(err, output) {
 		if(err) return res.status(500).json({error: 'database failure'});
 		res.status(204).end();
 	});
