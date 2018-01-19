@@ -75,12 +75,12 @@ app.delete('/api/questDel/:id', function(req, res) {
 app.post('/api/account', function(req, res) {
 	var account = new Account();
 	account.kakaoId         = req.body.kakaoId;
-	account.coin            = req.body.coin;
-	account.uploadedQuests  = req.body.uploadedQuests;
-	account.acceptedQuests  = req.body.acceptedQuests;
-	account.completedQuests = req.body.completedQuests;
-	account.level           = req.body.level;
-	account.experience      = req.body.experience;
+	account.coin            = 0;
+	account.uploadedQuests  = [];
+	account.acceptedQuests  = [];
+	account.completedQuests = [];
+	account.level           = 0;
+	account.experience      = 0;
 
 	account.save(function(err) {
 		if(err) {
@@ -103,9 +103,9 @@ app.get('/api/account', function(req, res) {
 
 // retrieve account by kakaoId
 app.get('/api/account/kakaoId/:id', function(req, res) {
-	Account.find({kakoId: req.params.id}, function(err, accounts) {
+	Account.findOne({kakaoId: req.params.id}, function(err, accounts) {
 		if(err) return res.status(500).json({error: 'database failure'});
-		if(accounts.length == 0) return res.status(404).json({error: 'no such account'});
+		if(accounts == null) return res.status(404).json({error: 'no such account'});
 		res.json(accounts);
 	});
 });
