@@ -25,7 +25,7 @@ Available APIs:
      - Mandatory fields:
         - "questId" : _id of the quest to accept.
         - "accountId" : kakaoId of the account accepting the quest.
-        - e.g. { "questId": "1a2b3c4d5e6f7a8b9c", "accountId": "72392763" }
+        - e.g. { "questId": "1a2b3c4d5e6f7a8b9c", "accountId": "72392763" }
      - returns { "result": 1 } for success.
      - returns { "result": 0 } for database failure.
      - returns { "result": 2 } if there is no such quest of _id "questId".
