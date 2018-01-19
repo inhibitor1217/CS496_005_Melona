@@ -17,6 +17,7 @@ var questSchema = new Schema({
 	                      //   1: In Queue
 	                      //   2: Matched
 	                      //   3: Completed
+	                      //   4: Reward
 	from: String,         // kakaoId of the account of the uploader.
 	to: String            // kakaoId of the account who accepted this Quest.
 

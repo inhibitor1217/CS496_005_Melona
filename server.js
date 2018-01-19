@@ -23,6 +23,10 @@ var Quest   = require('./models/quest');
 var Account = require('./models/account');
 
 // TODO
+// [ Debug giveup api ]
+// [ Debug withdraw api ]
+// [ Implement Complete ]
+// [ Implement Reward ]
 // [ Use TCP Socket for real-time connection! ]
 
 // post new quest
@@ -205,7 +209,66 @@ app.put('/api/accept', function(req, res) {
 //            Account.acceptedQuests
 //            Account.coin
 //            Account.exp
+const giveupPenaltyCoin = 0;
+const giveupPenaltyExp = 0;
+app.put('/api/giveup', function(req, res) {
+	if(req.body.questId == undefined) {
+		res.json({error: "field \'questId\' is undefined"});
+		return;
+	}
+	if(req.body.accountId == undefined) {
+		res.json({error: "field \'accountId\' is undefined"});
+		return;
+	}
+	Quest.findOne({_id: req.body.questId}, function(err, quests) {
+		if(err) {
+			res.json({"result": 0}); // failed : db error
+			return;
+		}
+		if(quests == undefined) {
+			res.json({"result": 2}); // failed : no such quest
+			return;
+		}
+		if(quests.state != 2) {
+			res.json({"result": 3}); // failed : quest is not in "Matched" state
+			return;
+		}
+		Account.findOne({kakaoId: req.body.accountId}, function(err, accounts) {
+			if(err) {
+				res.json({"result": 0}); // failed : db error
+				return;
+			}
+			if(accounts == undefined) {
+				res.json({"result": 4}); // failed : no such account
+				return;
+			}
+			if(quests.to != accounts.kakaoId) {
+				res.json({"result": 5}); // failed : wrong account
+				return;
+			}
 
+			quests.state = 1;
+			quests.to = "";
+
+			quests.save(function(err) {
+				if(err) {
+					res.json({"result": 0}); // failed : db error
+					return;
+				}
+				accounts.acceptedQuests = remove(accounts.acceptedQuests, quests.id);
+				accounts.coin = Math.max(0, accounts.coin - giveupPenaltyCoin);
+				accounts.coin = Math.max(0, accounts.experience - giveupPenaltyExp);
+				accounts.save(function(err) {
+					if(err) {
+						res.json({"result": 0}); // failed : db error
+						return;
+					}
+					res.json({"result": 1});
+				});
+			});
+		});
+	});
+});
 
 // withdraw quest
 //
@@ -218,16 +281,78 @@ app.put('/api/accept', function(req, res) {
 //
 // - delete Quest
 // - update : Account.uploadedQuests
-
+//            Account.coin
+app.put('/api/withdraw', function(req, res) {
+	if(req.body.questId == undefined) {
+		res.json({error: "field \'questId\' is undefined"});
+		return;
+	}
+	if(req.body.accountId == undefined) {
+		res.json({error: "field \'accountId\' is undefined"});
+		return;
+	}
+	Quest.findOne({_id: req.body.questId}, function(err, quests) {
+		if(err) {
+			res.json({"result": 0}); // failed : db error
+			return;
+		}
+		if(quests == undefined) {
+			res.json({"result": 2}); // failed : no such quest
+			return;
+		}
+		if(quests.state != 1 && quests.state != 2) {
+			res.json({"result": 3}); // failed : quest is alrady completed
+			return;
+		}
+		Account.findOne({kakaoId: req.body.accountId}, function(err, accounts) {
+			if(err) {
+				res.json({"result": 0}); // failed : db error
+				return;
+			}
+			if(accounts == undefined) {
+				res.json({"result": 4}); // failed : no such account
+				return;
+			}
+			if(quests.from != accounts.kakaoId) {
+				res.json({"result": 5}); // failed : wrong account
+				return;
+			}
+			accounts.uploadedQuests = remove(accounts.uploadedQuests, quests.id);
+			accounts.coin += quests.coinReward;
+			accounts.save(function(err) {
+				if(err) {
+					res.json({"result": 0}); // failed : db error
+					return;
+				}
+				Quest.remove({ _id: quests.id }, function(err, output) {
+					if(err) {
+						res.json({"result": 0}); // failed : db error
+						return;
+					}
+					res.json({"result": 1}); // success
+				});
+			});
+		});
+	});
+});
 
 // complete quest
 // - update Quest : state (Completed = 3)
 // - update Account : uploadedQuests
+app.put('/api/complete', function(req, res) {
+	// TODO
+});
+
+// receive reward
+// - update Quest : state (Reward = 4)
 // - update Account : acceptedQuests
 //                  : completedQuests
 //                  : coin
 //                  : experience
 //                  : level
+app.put('/api/reward', function(req, res) {
+	// TODO
+});
 
 // retrieve all quests
 app.get('/api/quest', function(req, res) {
@@ -349,3 +474,10 @@ app.delete('/api/account/kakaoId/:id', function(req, res) {
 var server = app.listen(port, function() {
 	console.log("Express server has started on port " + port);
 });
+
+
+
+// helper functions
+function remove(array, element) {
+	return array.filter(e => e !== element);
+}
