@@ -7,7 +7,7 @@ Port Address: 143.248.132.156:8080
 Available APIs:
   - POST : /api/quest
      - Adds new quest on database. Check models/quest.js for details.
-        - CAUTION: "startPoint", "destination", "title", "from", "to" fields are always required.
+        - CAUTION: "startPoint", "destination", "title", "from" fields are always required.
      - returns { "result": 1 } for success
      - returns { "result": 0 } for database failure
                            
