@@ -88,37 +88,22 @@ app.post('/api/quest', function(req, res) {
 
 // retrieve all quests
 app.get('/api/quest', function(req, res) {
-	Quest.find( { }, { "_id": false }, function(err, quests) {
-		if(err) return res.status(500).send({error: 'database failure'});
-		res.json(quests);
-	});
-});
 
-// retrieve all quests with given start point
-app.get('/api/quest/filter', function(req, res) {
-	var start = req.body.startPoint;
-	var end   = req.body.destination;
-	if( (start == undefined) && (end == undefined) ) {
-		Quest.find( { }, { "_id": false }, function(err, quests) {
-			if(err) return res.status(500).send( { error: 'database failure' } );
+	var sortBy = req.body.sortBy;
+	delete req.body["sortBy"];
+
+	if(sortBy == undefined) {
+		Quest.find( req.body, { "_id": false }, function(err, quests) {
+			if(err) return res.status(500).send({error: 'database failure'});
 			res.json(quests);
-		} );
-	} else if( end == undefined ) {
-		Quest.find( { startPoint: start }, { "_id": false }, function(err, quests) {
-			if(err) return res.status(500).send( { error: 'database failure' } );
-			res.json(quests);
-		} );
-	} else if( start == undefined ) {
-		Quest.find( { destination: end }, { "_id": false }, function(err, quests) {
-			if(err) return res.status(500).send( { error: 'database failure' } );
-			res.json(quests);
-		} );
+		});
 	} else {
-		Quest.find( { startPoint: start, destination: end }, { "_id": false }, function(err, quests) {
-			if(err) return res.status(500).send( { error: 'database failure' } );
+		Quest.find( req.body, { "_id": false } ).sort(sortBy).exec(function(err, quests) {
+			if(err) return res.status(500).send({error: 'database failure'});
 			res.json(quests);
-		} );
+		});
 	}
+
 });
 
 // delete all quests
