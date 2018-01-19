@@ -25,14 +25,53 @@ var Account = require('./models/account');
 // post new quest
 app.post('/api/quest', function(req, res) {
 	var quest = new Quest();
+
+	var coinReward = 0;
+	var expReward = 0;
+	var tag = [];
+	var text = "";
+
+	if(req.body.startPoint == undefined) {
+		res.json({result: "field \'startPoint\' is not defined"});
+		return;
+	}
+	if(req.body.destination == undefined) {
+		res.json({result: "field \'destination\' is not defined"});
+		return;
+	}
+	if(req.body.coinReward != undefined) {
+		coinReward = req.body.coinReward;
+	}
+	if(req.body.expReward != undefined) {
+		expReward = req.body.expReward;
+	}
+	if(req.body.tag != undefined) {
+		tag = req.body.tag;
+	}
+	if(req.body.title == undefined) {
+		res.json({result: "field \'title\' is not defined"});
+		return;
+	}
+	if(req.body.text != undefined) {
+		text = req.body.text;
+	}
+	if(req.body.from == undefined) {
+		res.json({result: "field \'from\' is not defined"});
+		return;
+	}
+	if(req.body.to == undefined) {
+		res.json({result: "field \'to\' is not defined"});
+		return;
+	}
+
 	quest.startPoint  = req.body.startPoint;
 	quest.destination = req.body.destination;
-	quest.coinReward  = req.body.coinReward;
-	quest.coinExp     = req.body.coinExp;
-	quest.tag         = req.body.tag;
+	quest.coinReward  = coinReward;
+	quest.expReward   = expReward;
+	quest.tag         = tag;
 	quest.title       = req.body.title;
-	quest.text        = req.body.text;
-	quest.state       = req.body.state;
+	quest.text        = text;
+	quest.state       = 0;
 	quest.from        = req.body.from;
 	quest.to          = req.body.to;
 
@@ -49,10 +88,37 @@ app.post('/api/quest', function(req, res) {
 
 // retrieve all quests
 app.get('/api/quest', function(req, res) {
-	Quest.find(function(err, quests) {
+	Quest.find( { }, { "_id": false }, function(err, quests) {
 		if(err) return res.status(500).send({error: 'database failure'});
 		res.json(quests);
 	});
+});
+
+// retrieve all quests with given start point
+app.get('/api/quest/filter', function(req, res) {
+	var start = req.body.startPoint;
+	var end   = req.body.destination;
+	if( (start == undefined) && (end == undefined) ) {
+		Quest.find( { }, { "_id": false }, function(err, quests) {
+			if(err) return res.status(500).send( { error: 'database failure' } );
+			res.json(quests);
+		} );
+	} else if( end == undefined ) {
+		Quest.find( { startPoint: start }, { "_id": false }, function(err, quests) {
+			if(err) return res.status(500).send( { error: 'database failure' } );
+			res.json(quests);
+		} );
+	} else if( start == undefined ) {
+		Quest.find( { destination: end }, { "_id": false }, function(err, quests) {
+			if(err) return res.status(500).send( { error: 'database failure' } );
+			res.json(quests);
+		} );
+	} else {
+		Quest.find( { startPoint: start, destination: end }, { "_id": false }, function(err, quests) {
+			if(err) return res.status(500).send( { error: 'database failure' } );
+			res.json(quests);
+		} );
+	}
 });
 
 // delete all quests
@@ -74,6 +140,10 @@ app.delete('/api/questDel/:id', function(req, res) {
 // post new account
 app.post('/api/account', function(req, res) {
 	var account = new Account();
+	if(req.body.kakaoId == undefined) {
+		res.json({result: "field \'kakaoId\' is not defined"});
+		return;
+	}
 	account.kakaoId         = req.body.kakaoId;
 	account.coin            = 0;
 	account.uploadedQuests  = [];
@@ -95,7 +165,7 @@ app.post('/api/account', function(req, res) {
 
 // retrieve all accounts
 app.get('/api/account', function(req, res) {
-	Account.find(function(err, accounts) {
+	Account.find( { }, { "_id": false }, function(err, accounts) {
 		if(err) return res.status(500).json({error: 'database failure'});
 		res.json(accounts);
 	});
@@ -103,7 +173,7 @@ app.get('/api/account', function(req, res) {
 
 // retrieve account by kakaoId
 app.get('/api/account/kakaoId/:id', function(req, res) {
-	Account.findOne({kakaoId: req.params.id}, function(err, accounts) {
+	Account.findOne( { kakaoId: req.params.id }, { "_id": false }, function(err, accounts) {
 		if(err) return res.status(500).json({error: 'database failure'});
 		if(accounts == null) return res.status(404).json({error: 'no such account'});
 		res.json(accounts);
