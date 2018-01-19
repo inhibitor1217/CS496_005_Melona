@@ -32,11 +32,11 @@ app.post('/api/quest', function(req, res) {
 	var text = "";
 
 	if(req.body.startPoint == undefined) {
-		res.json({result: "field \'startPoint\' is not defined"});
+		res.json({error: "field \'startPoint\' is not defined"});
 		return;
 	}
 	if(req.body.destination == undefined) {
-		res.json({result: "field \'destination\' is not defined"});
+		res.json({error: "field \'destination\' is not defined"});
 		return;
 	}
 	if(req.body.coinReward != undefined) {
@@ -49,43 +49,83 @@ app.post('/api/quest', function(req, res) {
 		tag = req.body.tag;
 	}
 	if(req.body.title == undefined) {
-		res.json({result: "field \'title\' is not defined"});
+		res.json({error: "field \'title\' is not defined"});
 		return;
 	}
 	if(req.body.text != undefined) {
 		text = req.body.text;
 	}
 	if(req.body.from == undefined) {
-		res.json({result: "field \'from\' is not defined"});
+		res.json({error: "field \'from\' is not defined"});
 		return;
 	}
 
-	// check if req.body.from is valid id
+	Account.findOne( { kakaoId: req.body.from }, function(err, accounts) {
 
-	quest.startPoint  = req.body.startPoint;
-	quest.destination = req.body.destination;
-	quest.coinReward  = coinReward;
-	quest.expReward   = expReward;
-	quest.tag         = tag;
-	quest.title       = req.body.title;
-	quest.text        = text;
-	quest.state       = 1;
-	quest.from        = req.body.from;
-	quest.to          = "";
-
-	quest.save(function(err) {
-		if(err) {
-			console.error(err);
-			res.json({result: 0}); // save failed
+		if(err) return res.status(500).json({error: 'database failure'});
+		if(accounts == null) {
+			res.json({result: 2}); // failed: invalid account id
 			return;
-		} else {
-			res.json({result: 1})  // save succeeded
 		}
-	});
 
-	// update Account: uploadedQuests
+		quest.startPoint  = req.body.startPoint;
+		quest.destination = req.body.destination;
+		quest.coinReward  = coinReward;
+		quest.expReward   = expReward;
+		quest.tag         = tag;
+		quest.title       = req.body.title;
+		quest.text        = text;
+		quest.state       = 1;
+		quest.from        = req.body.from;
+		quest.to          = "";
+
+		quest.save(function(err, q) {
+			if(err) {
+				console.error(err);
+				res.json({result: 0}); // failed: db error
+				return;
+			} else {
+				accounts.uploadedQuests.push(q.id);
+				accounts.save(function(err) {
+					if(err) {
+						console.error(err);
+						res.json({result: 0}); // failed: db error
+						return;
+					}
+					res.json({result: 1}); // success
+				});
+			}
+		});
+
+	} );
 
 });
+
+
+// accept quest
+// - update Quest : state (Matched = 2)
+//                : to
+// - update Account : uploadedQuests
+
+// give up quest
+// - update Quest : state (Matched = 1)
+//                : to
+// - update Account : acceptedQuests
+//                ( : coin, exp )
+
+// withdraw quest
+// - delete Quest
+// - update Account : uploadedQuests
+
+// complete quest
+// - update Quest : state (Completed = 3)
+// - update Account : uploadedQuests
+//                  : coin
+// - update Account : acceptedQuests
+//                  : completedQuests
+//                  : coin
+//                  : experience
+//                  : level
 
 // retrieve all quests
 app.get('/api/quest', function(req, res) {
@@ -135,7 +175,7 @@ app.post('/api/account', function(req, res) {
 
 		if(err) return res.status(500).json({error: 'database failure'});
 		if(accounts.length > 0) {
-			res.json({result: 2}); // duplicate kakaoId
+			res.json({result: 2}); // failed : duplicate kakaoId
 			return;
 		}
 
@@ -152,10 +192,10 @@ app.post('/api/account', function(req, res) {
 		account.save(function(err) {
 			if(err) {
 				console.error(err);
-				res.json({result: 0}); // save failed
+				res.json({result: 0}); // failed : database error
 				return;
 			} else {
-				res.json({result: 1})  // save succeeded
+				res.json({result: 1})  // succeeded
 			}
 		});
 
@@ -195,31 +235,6 @@ app.delete('/api/accountDel/:id', function(req, res) {
 		res.status(204).end();
 	});
 });
-
-// accept quest
-// - update Quest : state (Matched = 2)
-//                : to
-// - update Account : uploadedQuests
-
-// give up quest
-// - update Quest : state (Matched = 1)
-//                : to
-// - update Account : acceptedQuests
-//                ( : coin, exp )
-
-// withdraw quest
-// - delete Quest
-// - update Account : uploadedQuests
-
-// complete quest
-// - update Quest : state (Completed = 3)
-// - update Account : uploadedQuests
-//                  : coin
-// - update Account : acceptedQuests
-//                  : completedQuests
-//                  : coin
-//                  : experience
-//                  : level
 
 var server = app.listen(port, function() {
 	console.log("Express server has started on port " + port);
