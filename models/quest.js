@@ -13,7 +13,7 @@ var questSchema = new Schema({
 	title: String,        // Title Text user uploaded to the Quest.
 	text: String,         // Additional Text (title, body, etc) user uploaded to the Quest.
 	state: Number,        // State of this Quest.
-	                      //   0: Waiting
+	                      //   0: None
 	                      //   1: In Queue
 	                      //   2: Matched
 	                      //   3: Completed

@@ -60,6 +60,8 @@ app.post('/api/quest', function(req, res) {
 		return;
 	}
 
+	// check if req.body.from is valid id
+
 	quest.startPoint  = req.body.startPoint;
 	quest.destination = req.body.destination;
 	quest.coinReward  = coinReward;
@@ -67,7 +69,7 @@ app.post('/api/quest', function(req, res) {
 	quest.tag         = tag;
 	quest.title       = req.body.title;
 	quest.text        = text;
-	quest.state       = 0;
+	quest.state       = 1;
 	quest.from        = req.body.from;
 	quest.to          = "";
 
@@ -80,6 +82,9 @@ app.post('/api/quest', function(req, res) {
 			res.json({result: 1})  // save succeeded
 		}
 	});
+
+	// update Account: uploadedQuests
+
 });
 
 // retrieve all quests
@@ -120,28 +125,42 @@ app.delete('/api/questDel/:id', function(req, res) {
 
 // post new account
 app.post('/api/account', function(req, res) {
-	var account = new Account();
+
 	if(req.body.kakaoId == undefined) {
 		res.json({result: "field \'kakaoId\' is not defined"});
 		return;
 	}
-	account.kakaoId         = req.body.kakaoId;
-	account.coin            = 0;
-	account.uploadedQuests  = [];
-	account.acceptedQuests  = [];
-	account.completedQuests = [];
-	account.level           = 0;
-	account.experience      = 0;
 
-	account.save(function(err) {
-		if(err) {
-			console.error(err);
-			res.json({result: 0}); // save failed
+	Account.find( { kakaoId: req.body.kakaoId }, function(err, accounts) {
+
+		if(err) return res.status(500).json({error: 'database failure'});
+		if(accounts.length > 0) {
+			res.json({result: 2}); // duplicate kakaoId
 			return;
-		} else {
-			res.json({result: 1})  // save succeeded
 		}
+
+		var account = new Account();
+
+		account.kakaoId         = req.body.kakaoId;
+		account.coin            = 0;
+		account.uploadedQuests  = [];
+		account.acceptedQuests  = [];
+		account.completedQuests = [];
+		account.level           = 0;
+		account.experience      = 0;
+
+		account.save(function(err) {
+			if(err) {
+				console.error(err);
+				res.json({result: 0}); // save failed
+				return;
+			} else {
+				res.json({result: 1})  // save succeeded
+			}
+		});
+
 	});
+
 });
 
 // retrieve all accounts
@@ -178,14 +197,29 @@ app.delete('/api/accountDel/:id', function(req, res) {
 });
 
 // accept quest
-// - update quest : state
+// - update Quest : state (Matched = 2)
 //                : to
-// 
+// - update Account : uploadedQuests
 
 // give up quest
+// - update Quest : state (Matched = 1)
+//                : to
+// - update Account : acceptedQuests
+//                ( : coin, exp )
 
+// withdraw quest
+// - delete Quest
+// - update Account : uploadedQuests
 
-// 
+// complete quest
+// - update Quest : state (Completed = 3)
+// - update Account : uploadedQuests
+//                  : coin
+// - update Account : acceptedQuests
+//                  : completedQuests
+//                  : coin
+//                  : experience
+//                  : level
 
 var server = app.listen(port, function() {
 	console.log("Express server has started on port " + port);
