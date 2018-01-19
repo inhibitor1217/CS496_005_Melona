@@ -15,7 +15,7 @@ Available APIs:
   
   - POST : /api/account                
      - Adds new account on database. Check models/account.js for details.
-     - CAUTION : data other than "kakaoId" is automatically initialized in server.
+     	- CAUTION : data other than "kakaoId" is automatically initialized in server.
      - returns { "result": 1 } for success
      - returns { "result": 0 } for failure
   
@@ -23,5 +23,5 @@ Available APIs:
      - Retrieves all accounts on database.
   
   - GET  : /api/account/kakaoId/[id]
-	 - Retrieves an account which kakaoId is [id].
+     - Retrieves an account which kakaoId is [id].
      - returns 404 (NOT FOUND) error with { "error": "no such account" } if the account with given kakaoId does not exist.
