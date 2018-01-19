@@ -8,19 +8,30 @@ Available APIs:
   - POST : /api/quest
      - Adds new quest on database. Check models/quest.js for details.
         - CAUTION: "startPoint", "destination", "title", "from" fields are always required.
-     - Also updates "uploadedQuests" field of the account of kakaoId "from".
-     - returns { "result": 1 } for success
-     - returns { "result": 0 } for database failure
+     - returns { "result": 1 } for success.
+     - returns { "result": 0 } for database failure.
      - returns { "result": 2 } if there is no such account of kakaoId "from".
-     - returns { "result": 3 } if account of kakaoId "from" has not enough coin
+     - returns { "result": 3 } if account of kakaoId "from" has not enough coin.
                            
   - GET  : /api/quest
      - Retrieves all quests on database.
         - OPTION: Use "sortBy" field to retrieve sorted data
         - OPTION: Use fields to filter data
-        
         - e.g. { "sortBy": "title" } will sort quests using its title
         - e.g. { "startPoint": [start], "sortBy": "title" } will retrieve quests whose "startPoint" field is [start], and the result will be sorted by title
+        
+  - PUT  : /api/accept
+     - Accepts a quest in the queue.
+     - Mandatory fields:
+        - "questId" : _id of the quest to accept.
+        - "accountId" : kakaoId of the account accepting the quest.
+        - e.g. { "questId": "1a2b3c4d5e6f7a8b9c", "accountId": "72392763" }
+     - returns { "result": 1 } for success.
+     - returns { "result": 0 } for database failure.
+     - returns { "result": 2 } if there is no such quest of _id "questId".
+     - returns { "result": 3 } if the quest is already matched or completed.
+     - returns { "result": 4 } if there is no such account of kakaoId "accountId".
+     - returns { "result": 5 } if the account accepting the quest is the uploader of the quest.
  
   - POST : /api/account                
      - Adds new account on database. Check models/account.js for details.
