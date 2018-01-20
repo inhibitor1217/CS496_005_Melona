@@ -17,10 +17,10 @@ Available APIs:
                            
   - GET  : /api/quest
      - Retrieves all quests on database.
-        - OPTION: Use "sortBy" field to retrieve sorted data.
-        - OPTION: Use fields to filter data.
-        - e.g. { "sortBy": "title" } will sort quests using its title.
-        - e.g. { "startPoint": [start], "sortBy": "title" } will retrieve quests whose "startPoint" field is [start], and the result will be sorted by title.
+        - OPTION: Use "sortBy" parameter to retrieve sorted data.
+        - OPTION: Use parameters to filter data.
+        - e.g. /api/quest?sortBy=title will sort quests using its title.
+        - e.g. /api/quest?startPoint=start&sortBy=title will retrieve quests whose "startPoint" field is "start", and the result will be sorted by title.
         
   - PUT  : /api/accept
      - Accepts a quest in the queue.
