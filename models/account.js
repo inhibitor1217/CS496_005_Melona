@@ -11,7 +11,11 @@ var accountSchema = new Schema({
 	acceptedQuests: [String],   // Array of ids of each quest accepted by this account.
 	completedQuests: [String],  // Array of ids of each quest completed by this account.
 	level: Number,              // Current level of this account.
-	experience: Number          // Experience of this account.
+	experience: Number,         // Experience of this account.
+
+	// only used in server (hidden)
+	rooms: [String],
+	msgQueue: [[String]]
 
 });
 

@@ -23,10 +23,7 @@ var Quest   = require('./models/quest');
 var Account = require('./models/account');
 
 // TODO
-// [ Debug withdraw api ]
-// [ Implement Complete ]
-// [ Implement Reward ]
-// [ Use TCP Socket for real-time connection! ]
+// [ Use Socket.io for real-time connection! ]
 
 // post new quest
 app.post('/api/quest', function(req, res) {
@@ -40,11 +37,9 @@ app.post('/api/quest', function(req, res) {
 
 	if(req.body.startPoint != undefined) {
 		startPoint = req.body.startPoint;
-		return;
 	}
 	if(req.body.destination != undefined) {
-		dsetination = req.body.destination;
-		return;
+		destination = req.body.destination;
 	}
 	if(req.body.coinReward != undefined) {
 		coinReward = req.body.coinReward;
@@ -484,22 +479,44 @@ app.put('/api/reward', function(req, res) {
 
 // retrieve all quests
 app.get('/api/quest', function(req, res) {
+	Quest.find( { }, function(err, quests) {
+		if(err) return res.status(500).send({error: 'database failure'});
+		res.json(quests);
+	});
 
-	var sortBy = req.body.sortBy;
-	delete req.body["sortBy"];
+});
 
-	if(sortBy == undefined) {
-		Quest.find( req.body, function(err, quests) {
-			if(err) return res.status(500).send({error: 'database failure'});
-			res.json(quests);
-		});
-	} else {
-		Quest.find( req.body ).sort(sortBy).exec(function(err, quests) {
-			if(err) return res.status(500).send({error: 'database failure'});
-			res.json(quests);
-		});
-	}
+// retrieve quests by startPoint
+app.get('/api/quest/startPoint/:startPoint', function(req, res) {
+	Quest.find( { startPoint: req.params.startPoint }, function(err, quests) {
+		if(err) return res.status(500).send({error: 'database failure'});
+		res.json(quests);
+	} );
+});
 
+
+// retrieve quests by destination
+app.get('/api/quest/destination/:destination', function(req, res) {
+	Quest.find( { destination: req.params.destination }, function(err, quests) {
+		if(err) return res.status(500).send({error: 'database failure'});
+		res.json(quests);
+	} );
+});
+
+// retrieve quests by uploader
+app.get('/api/quest/uploader/:uploader', function(req, res) {
+	Quest.find( { from: req.params.uploader }, function(err, quests) {
+		if(err) return res.status(500).send({error: 'database failure'});
+		res.json(quests);
+	} );
+});
+
+// retrieve quests by receiver
+app.get('/api/quest/receiver/:receiver', function(req, res) {
+	Quest.find( { to: req.params.receiver }, function(err, quests) {
+		if(err) return res.status(500).send({error: 'database failure'});
+		res.json(quests);
+	} );
 });
 
 // delete all quests
@@ -544,6 +561,9 @@ app.post('/api/account', function(req, res) {
 		account.level           = 0;
 		account.experience      = 0;
 
+		account.rooms = [];
+		account.msgQueue = [[]];
+
 		account.save(function(err) {
 			if(err) {
 				console.error(err);
@@ -560,7 +580,15 @@ app.post('/api/account', function(req, res) {
 
 // retrieve all accounts
 app.get('/api/account', function(req, res) {
-	Account.find( { }, { "_id": false }, function(err, accounts) {
+	Account.find( { }, { "_id": false, "rooms": false, "msgQueue": false }, function(err, accounts) {
+		if(err) return res.status(500).json({error: 'database failure'});
+		res.json(accounts);
+	});
+});
+
+// retrieve all accounts (server api)
+app.get('/api/__server__/account', function(req, res) {
+	Account.find( { }, { }, function(err, accounts) {
 		if(err) return res.status(500).json({error: 'database failure'});
 		res.json(accounts);
 	});
@@ -568,7 +596,16 @@ app.get('/api/account', function(req, res) {
 
 // retrieve account by kakaoId
 app.get('/api/account/kakaoId/:id', function(req, res) {
-	Account.findOne( { kakaoId: req.params.id }, { "_id": false }, function(err, accounts) {
+	Account.findOne( { kakaoId: req.params.id }, { "_id": false, "rooms": false, "msgQueue": false }, function(err, accounts) {
+		if(err) return res.status(500).json({error: 'database failure'});
+		if(accounts == null) return res.status(404).json({error: 'no such account'});
+		res.json(accounts);
+	});
+});
+
+// retrieve account by kakaoId (server api)
+app.get('/api/__server__/account/kakaoId/:id', function(req, res) {
+	Account.findOne( { kakaoId: req.params.id }, { }, function(err, accounts) {
 		if(err) return res.status(500).json({error: 'database failure'});
 		if(accounts == null) return res.status(404).json({error: 'no such account'});
 		res.json(accounts);
