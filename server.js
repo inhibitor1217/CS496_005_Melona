@@ -23,7 +23,6 @@ var Quest   = require('./models/quest');
 var Account = require('./models/account');
 
 // TODO
-// [ Debug giveup api ]
 // [ Debug withdraw api ]
 // [ Implement Complete ]
 // [ Implement Reward ]
@@ -278,6 +277,7 @@ app.put('/api/giveup', function(req, res) {
 // - assert : Quest with Quest._id exists
 //            Quest.state is "In Queue" or "Matched"
 //            Account with Account.kakaoId exists
+//            Account is the uploader
 //
 // - delete Quest
 // - update : Account.uploadedQuests
@@ -301,7 +301,7 @@ app.put('/api/withdraw', function(req, res) {
 			return;
 		}
 		if(quests.state != 1 && quests.state != 2) {
-			res.json({"result": 3}); // failed : quest is alrady completed
+			res.json({"result": 3}); // failed : quest is already completed
 			return;
 		}
 		Account.findOne({kakaoId: req.body.accountId}, function(err, accounts) {
@@ -337,21 +337,147 @@ app.put('/api/withdraw', function(req, res) {
 });
 
 // complete quest
-// - update Quest : state (Completed = 3)
-// - update Account : uploadedQuests
+// 
+// - required fields : Quest._id
+//                     Account.kakaoId
+//
+// - assert : Quest with Quest._id exists
+//            Quest.state is "Matched"
+//            Account with Account.kakaoId exists
+//            Account is the uploader
+//
+// - update : Quest.state (Completed = 3)
+//            Account.uploadedQuests
 app.put('/api/complete', function(req, res) {
-	// TODO
+	if(req.body.questId == undefined) {
+		res.json({error: "field \'questId\' is undefined"});
+		return;
+	}
+	if(req.body.accountId == undefined) {
+		res.json({error: "field \'accountId\' is undefined"});
+		return;
+	}
+	Quest.findOne({_id: req.body.questId}, function(err, quests) {
+		if(err) {
+			res.json({"result": 0}); // failed : db error
+			return;
+		}
+		if(quests == undefined) {
+			res.json({"result": 2}); // failed : no such quest
+			return;
+		}
+		if(quests.state != 2) {
+			res.json({"result": 3}); // failed : quest is not "Matched"
+			return;
+		}
+		Account.findOne({kakaoId: req.body.accountId}, function(err, accounts) {
+			if(err) {
+				res.json({"result": 0}); // failed : db error
+				return;
+			}
+			if(accounts == undefined) {
+				res.json({"result": 4}); // failed : no such account
+				return;
+			}
+			if(quests.from != accounts.kakaoId) {
+				res.json({"result": 5}); // failed : wrong account
+				return;
+			}
+			quests.state = 3;
+			quests.save(function(err) {
+				if(err) {
+					res.json({"result": 0}); // failed : db error
+					return;
+				}
+				accounts.uploadedQuests = remove(accounts.uploadedQuests, quests.id);
+				accounts.save(function(err) {
+					if(err) {
+						res.json({"result": 0}); // failed : db error
+						return;
+					}
+					res.json({"result": 1}); // success
+				});
+			});
+		});
+	});
 });
 
 // receive reward
+//
+// - required fields : Quest._id
+//                     Account.kakaoId
+//
+// - assert : Quest with Quest._id exists
+//            Quest.state is "Completed"
+//            Account with Account.kakaoId exists
+//            Account is the receiver
+//
 // - update Quest : state (Reward = 4)
 // - update Account : acceptedQuests
 //                  : completedQuests
 //                  : coin
 //                  : experience
 //                  : level
+const maxExp = 100;
 app.put('/api/reward', function(req, res) {
-	// TODO
+	if(req.body.questId == undefined) {
+		res.json({error: "field \'questId\' is undefined"});
+		return;
+	}
+	if(req.body.accountId == undefined) {
+		res.json({error: "field \'accountId\' is undefined"});
+		return;
+	}
+	Quest.findOne({_id: req.body.questId}, function(err, quests) {
+		if(err) {
+			res.json({"result": 0}); // failed : db error
+			return;
+		}
+		if(quests == undefined) {
+			res.json({"result": 2}); // failed : no such quest
+			return;
+		}
+		if(quests.state != 3) {
+			res.json({"result": 3}); // failed : quest is not "Completed"
+			return;
+		}
+		Account.findOne({kakaoId: req.body.accountId}, function(err, accounts) {
+			if(err) {
+				res.json({"result": 0}); // failed : db error
+				return;
+			}
+			if(accounts == undefined) {
+				res.json({"result": 4}); // failed : no such account
+				return;
+			}
+			if(quests.to != accounts.kakaoId) {
+				res.json({"result": 5}); // failed : wrong account
+				return;
+			}
+			quests.state = 4;
+			quests.save(function(err) {
+				if(err) {
+					res.json({"result": 0}); // failed : db error
+					return;
+				}
+				accounts.acceptedQuests = remove(accounts.acceptedQuests, quests.id);
+				accounts.completedQuests.push(quests.id);
+				accounts.coin += quests.coinReward;
+				accounts.experience += quests.expReward;
+				if(accounts.experience >= maxExp) {
+					accounts.level++;
+					accounts.experience -= maxExp;
+				}
+				accounts.save(function(err) {
+					if(err) {
+						res.json({"result": 0}); // failed : db error
+						return;
+					}
+					res.json({"result": 1}) // success
+				});
+			});
+		});
+	});
 });
 
 // retrieve all quests
