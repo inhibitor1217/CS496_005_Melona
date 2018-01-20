@@ -31,17 +31,19 @@ var Account = require('./models/account');
 // post new quest
 app.post('/api/quest', function(req, res) {
 
+	var startPoint = "undefined";
+	var destination = "undefined";
 	var coinReward = 0;
 	var expReward = 0;
 	var tag = [];
 	var text = "";
 
-	if(req.body.startPoint == undefined) {
-		res.json({error: "field \'startPoint\' is not defined"});
+	if(req.body.startPoint != undefined) {
+		startPoint = req.body.startPoint;
 		return;
 	}
-	if(req.body.destination == undefined) {
-		res.json({error: "field \'destination\' is not defined"});
+	if(req.body.destination != undefined) {
+		dsetination = req.body.destination;
 		return;
 	}
 	if(req.body.coinReward != undefined) {
@@ -81,8 +83,8 @@ app.post('/api/quest', function(req, res) {
 		}
 
 		var quest = new Quest();
-		quest.startPoint  = req.body.startPoint;
-		quest.destination = req.body.destination;
+		quest.startPoint  = startPoint;
+		quest.destination = destination;
 		quest.coinReward  = coinReward;
 		quest.expReward   = expReward;
 		quest.tag         = tag;
