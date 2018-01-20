@@ -479,44 +479,25 @@ app.put('/api/reward', function(req, res) {
 
 // retrieve all quests
 app.get('/api/quest', function(req, res) {
-	Quest.find( { }, function(err, quests) {
+
+	req.params = params(req);
+	if(req.params.coinReward) req.params.coinReward *= 1;
+	if(req.params.expReward) req.params.expReward *= 1;
+	if(req.params.state) req.params.state *= 1;
+
+	if(req.params.sortBy) {
+		var sortBy = req.params.sortBy;
+		delete req.params.sortBy;
+		Quest.find( req.params ).sort(sortBy).exec( function(err, quests) {
+			if(err) return res.status(500).send({error: 'database failure'});
+			res.json(quests);
+		});
+	}
+	else Quest.find( req.params, function(err, quests) {
 		if(err) return res.status(500).send({error: 'database failure'});
 		res.json(quests);
 	});
 
-});
-
-// retrieve quests by startPoint
-app.get('/api/quest/startPoint/:startPoint', function(req, res) {
-	Quest.find( { startPoint: req.params.startPoint }, function(err, quests) {
-		if(err) return res.status(500).send({error: 'database failure'});
-		res.json(quests);
-	} );
-});
-
-
-// retrieve quests by destination
-app.get('/api/quest/destination/:destination', function(req, res) {
-	Quest.find( { destination: req.params.destination }, function(err, quests) {
-		if(err) return res.status(500).send({error: 'database failure'});
-		res.json(quests);
-	} );
-});
-
-// retrieve quests by uploader
-app.get('/api/quest/uploader/:uploader', function(req, res) {
-	Quest.find( { from: req.params.uploader }, function(err, quests) {
-		if(err) return res.status(500).send({error: 'database failure'});
-		res.json(quests);
-	} );
-});
-
-// retrieve quests by receiver
-app.get('/api/quest/receiver/:receiver', function(req, res) {
-	Quest.find( { to: req.params.receiver }, function(err, quests) {
-		if(err) return res.status(500).send({error: 'database failure'});
-		res.json(quests);
-	} );
 });
 
 // delete all quests
@@ -645,4 +626,18 @@ var server = app.listen(port, function() {
 // helper functions
 function remove(array, element) {
 	return array.filter(e => e !== element);
+}
+
+var params = function(req){
+  var q=req.url.split('?'),result={};
+  if(q.length>=2){
+      q[1].split('&').forEach((item)=>{
+           try {
+             result[item.split('=')[0]]=item.split('=')[1];
+           } catch (e) {
+             result[item.split('=')[0]]='';
+           }
+      })
+  }
+  return result;
 }
