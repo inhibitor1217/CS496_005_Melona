@@ -15,10 +15,10 @@ Available APIs:
                            
   - GET  : /api/quest
      - Retrieves all quests on database.
-        - OPTION: Use "sortBy" field to retrieve sorted data
-        - OPTION: Use fields to filter data
-        - e.g. { "sortBy": "title" } will sort quests using its title
-        - e.g. { "startPoint": [start], "sortBy": "title" } will retrieve quests whose "startPoint" field is [start], and the result will be sorted by title
+        - OPTION: Use "sortBy" field to retrieve sorted data.
+        - OPTION: Use fields to filter data.
+        - e.g. { "sortBy": "title" } will sort quests using its title.
+        - e.g. { "startPoint": [start], "sortBy": "title" } will retrieve quests whose "startPoint" field is [start], and the result will be sorted by title.
         
   - PUT  : /api/accept
      - Accepts a quest in the queue.
@@ -34,12 +34,28 @@ Available APIs:
      - returns { "result": 5 } if the account accepting the quest is the uploader of the quest.
      
   - PUT  : /api/giveup
-     - Give up a quest accepted previously.
-     - Still working on
+     - Give up a quest accepted by an account.
+     - Mandatory fields:
+          - "questId" : _id of the quest to accept.
+          - "accountId" : kakaoId of the account giving up the quest.
+     - returns { "result": 1 } for success.
+     - returns { "result": 0 } for database failure.
+     - returns { "result": 2 } if there is no such quest of _id "questId".
+     - returns { "result": 3 } if the quest is not in "Matched" state.
+     - returns { "result": 4 } if there is no such account of kakaoId "accountId".
+     - returns { "result": 5 } if the given account is not the one accepting the quest.
   
   - PUT  : /api/withdraw
      - Withdraw a quest posted previously.
-     - Still working on
+     - Mandatory fields:
+          - "questId" : _id of the quest to accept.
+          - "accountId" : kakaoId of the account giving up the quest.
+     - returns { "result": 1 } for success.
+     - returns { "result": 0 } for database failure.
+     - returns { "result": 2 } if there is no such quest of _id "questId".
+     - returns { "result": 3 } if the quest is not in "In Queue" or "Matched" state.
+     - returns { "result": 4 } if there is no such account of kakaoId "accountId".
+     - returns { "result": 5 } if the given account is not the uploader of the quest.
      
   - PUT  : /api/complete
      - Confirm a posted quest to be completed.
