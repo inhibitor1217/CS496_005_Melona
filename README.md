@@ -8,6 +8,7 @@ Available APIs:
   - POST : /api/quest
      - Adds new quest on database. Check models/quest.js for details.
         - CAUTION: "startPoint", "destination", "title", "from" fields are always required.
+     - A new quest will have state "In Queue".
      - returns { "result": 1 } for success.
      - returns { "result": 0 } for database failure.
      - returns { "result": 2 } if there is no such account of kakaoId "from".
@@ -26,6 +27,7 @@ Available APIs:
         - "questId" : _id of the quest to accept.
         - "accountId" : kakaoId of the account accepting the quest.
         - e.g. { "questId": "1a2b3c4d5e6f7a8b9c", "accountId": "72392763" }
+     - Will modify the quest state : "In Queue" -> "Matched"
      - returns { "result": 1 } for success.
      - returns { "result": 0 } for database failure.
      - returns { "result": 2 } if there is no such quest of _id "questId".
@@ -38,6 +40,7 @@ Available APIs:
      - Mandatory fields:
           - "questId" : _id of the quest to accept.
           - "accountId" : kakaoId of the account giving up the quest.
+     - Will modify the quest state : "Matched" -> "In Queue"
      - returns { "result": 1 } for success.
      - returns { "result": 0 } for database failure.
      - returns { "result": 2 } if there is no such quest of _id "questId".
@@ -46,10 +49,11 @@ Available APIs:
      - returns { "result": 5 } if the given account is not the one accepting the quest.
   
   - PUT  : /api/withdraw
-     - Withdraw a quest posted previously.
+     - Withdraw a non-completed quest posted previously.
      - Mandatory fields:
           - "questId" : _id of the quest to accept.
           - "accountId" : kakaoId of the account giving up the quest.
+     - Will delete the quest information from the database.
      - returns { "result": 1 } for success.
      - returns { "result": 0 } for database failure.
      - returns { "result": 2 } if there is no such quest of _id "questId".
@@ -60,12 +64,30 @@ Available APIs:
   - PUT  : /api/complete
      - Confirm a posted quest to be completed.
      - This API is used on uploader's account.
-     - Still working on
+     - Mandatory fields:
+          - "questId" : _id of the quest to accept.
+          - "accountId" : kakaoId of the uploader account.
+     - Will modify the quest state : "Matched" -> "Completed"
+     - returns { "result": 1 } for success.
+     - returns { "result": 0 } for database failure.
+     - returns { "result": 2 } if there is no such quest of _id "questId".
+     - returns { "result": 3 } if the quest is not in "Matched" state.
+     - returns { "result": 4 } if there is no such account of kakaoId "accountId".
+     - returns { "result": 5 } if the given account is not the uploader of the quest.
      
   - PUT  : /api/reward
      - Receive reward of a completed quest.
      - This API is used on receiver's account.
-     - Still working on
+     - Mandatory fields:
+          - "questId" : _id of the quest to accept.
+          - "accountId" : kakaoId of the receiver account.
+     - Will modify the quest state : "Completed" -> "Rewarded"
+     - returns { "result": 1 } for success.
+     - returns { "result": 0 } for database failure.
+     - returns { "result": 2 } if there is no such quest of _id "questId".
+     - returns { "result": 3 } if the quest is not in "Completed" state.
+     - returns { "result": 4 } if there is no such account of kakaoId "accountId".
+     - returns { "result": 5 } if the given account is not the receiver of the quest.
  
   - POST : /api/account                
      - Adds new account on database. Check models/account.js for details.
