@@ -71,7 +71,7 @@ app.post('/api/quest', function(req, res) {
 			res.json({result: 2}); // failed: invalid account id
 			return;
 		}
-		if(accounts.coin < coinReward) {
+		if(accounts.kakaoId != "admin" && accounts.coin < coinReward) {
 			res.json({result: 3}); // failed: not enough coin
 			return;
 		}
@@ -95,6 +95,7 @@ app.post('/api/quest', function(req, res) {
 				return;
 			} else {
 				accounts.uploadedQuests.push(q.id);
+				if(accounts.kakaoId != "admin") accounts.coin -= coinReward;
 				accounts.save(function(err) {
 					if(err) {
 						console.error(err);
@@ -344,16 +345,38 @@ app.put('/api/withdraw', function(req, res) {
 						res.json({"result": 0}); // failed : db error
 						return;
 					}
-					if(enableRealTimeConnection) {
-						var data = quests.id;
-						if(quests.to != "") {
-							if(socket_ids[quests.to] != undefined) {
-								io.sockets(socket_ids[quests.to]).emit('questWithdrawn', data);
+					if(quests.to != "") {
+						Account.findOne({kakaoId: quests.to}, function(err, recAcc) {
+							if(err) return res.json({"result": 0});
+							recAcc.acceptedQuests = remove(recAcc.acceptedQuests, quests.id);
+							recAcc.save(function(err) {
+								if(err) return res.json({"result": 0});
+								if(enableRealTimeConnection) {
+									var data = quests.id;
+									if(quests.to != "") {
+										if(socket_ids[quests.to] != undefined) {
+											io.sockets(socket_ids[quests.to]).emit('questWithdrawn', data);
+										}
+									}
+									res.json({"result": 1});
+								} else {
+									res.json({"result": 1});
+								}
+							});
+						});
+					}
+					else {
+						if(enableRealTimeConnection) {
+							var data = quests.id;
+							if(quests.to != "") {
+								if(socket_ids[quests.to] != undefined) {
+									io.sockets(socket_ids[quests.to]).emit('questWithdrawn', data);
+								}
 							}
+							res.json({"result": 1});
+						} else {
+							res.json({"result": 1});
 						}
-						res.json({"result": 1});
-					} else {
-						res.json({"result": 1});
 					}
 				});
 			});
@@ -523,15 +546,32 @@ app.get('/api/quest', function(req, res) {
 	if(req.params.sortBy) {
 		var sortBy = req.params.sortBy;
 		delete req.params.sortBy;
-		Quest.find( req.params ).sort(sortBy).exec( function(err, quests) {
-			if(err) return res.status(500).send({error: 'database failure'});
+		if(req.params.tag) {
+			var tag = req.params.tag;
+			delete req.params.tag;
+			Quest.find( { $and: [ req.params, { $where: "this.tag.includes(\"" + tag + "\")" } ] } ).sort(sortBy).exec( function(err, quests) {
+				if(err) return res.json({error: 'database failure'});
+				res.json(quests);
+			});
+		} else Quest.find( req.params ).sort(sortBy).exec( function(err, quests) {
+			if(err) return res.json({error: 'database failure'});
 			res.json(quests);
 		});
 	}
-	else Quest.find( req.params, function(err, quests) {
-		if(err) return res.status(500).send({error: 'database failure'});
-		res.json(quests);
-	});
+	else {
+		if(req.params.tag) {
+			var tag = req.params.tag;
+			delete req.params.tag;
+			Quest.find( { $and: [ req.params, { $where: "this.tag.includes(\"" + tag + "\")" } ] }, function(err, quests) {
+				if(err) return res.json({error: 'database failure'});
+				res.json(quests);
+			} );
+		}
+		else Quest.find( req.params, function(err, quests) {
+			if(err) return res.json({error: 'database failure'});
+			res.json(quests);
+		});
+	}
 
 });
 
