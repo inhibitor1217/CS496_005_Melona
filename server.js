@@ -22,8 +22,7 @@ var port = process.env.PORT || 8080;
 var Quest   = require('./models/quest');
 var Account = require('./models/account');
 
-// TODO
-// [ Use Socket.io for real-time connection! ]
+var enableRealTimeConnection = false;
 
 // post new quest
 app.post('/api/quest', function(req, res) {
@@ -102,7 +101,9 @@ app.post('/api/quest', function(req, res) {
 						res.json({result: 0}); // failed: db error
 						return;
 					}
+
 					res.json({result: 1}); // success
+					
 				});
 			}
 		});
@@ -180,7 +181,16 @@ app.put('/api/accept', function(req, res) {
 						res.json( { result : 0 } ); // failed : db error
 						return;
 					}
-					res.json( { result : 1 } ); // success
+
+					if(enableRealTimeConnection) {
+						var data = quests.id;
+						if(socket_ids[quests.from] != undefined) {
+							io.sockets(socket_ids[quests.from]).emit('questAccepted', data);
+						}
+						res.json({result: 1}); // success
+					} else {
+						res.json( { result : 1 } ); // success
+					}
 				});
 			})
 
@@ -259,7 +269,15 @@ app.put('/api/giveup', function(req, res) {
 						res.json({"result": 0}); // failed : db error
 						return;
 					}
-					res.json({"result": 1});
+					if(enableRealTimeConnection) {
+						var data = quests.id;
+						if(socket_ids[quests.from] != undefined) {
+							io.sockets(socket_ids[quests.from]).emit('questGaveUp', data);
+						}
+						res.json({"result": 1});
+					} else {
+						res.json({"result": 1});
+					}
 				});
 			});
 		});
@@ -326,7 +344,17 @@ app.put('/api/withdraw', function(req, res) {
 						res.json({"result": 0}); // failed : db error
 						return;
 					}
-					res.json({"result": 1}); // success
+					if(enableRealTimeConnection) {
+						var data = quests.id;
+						if(quests.to != "") {
+							if(socket_ids[quests.to] != undefined) {
+								io.sockets(socket_ids[quests.to]).emit('questWithdrawn', data);
+							}
+						}
+						res.json({"result": 1});
+					} else {
+						res.json({"result": 1});
+					}
 				});
 			});
 		});
@@ -392,7 +420,14 @@ app.put('/api/complete', function(req, res) {
 						res.json({"result": 0}); // failed : db error
 						return;
 					}
-					res.json({"result": 1}); // success
+					if(enableRealTimeConnection) {
+						if(socket_ids[quests.to] != undefined) {
+							io.sockets(socket_ids[quests.to]).emit('questCompleted', data);
+						}
+						res.json({"result": 1});
+					} else {
+						res.json({"result": 1});
+					}
 				});
 			});
 		});
@@ -542,7 +577,6 @@ app.post('/api/account', function(req, res) {
 		account.level           = 0;
 		account.experience      = 0;
 
-		account.rooms = [];
 		account.msgQueue = [[]];
 
 		account.save(function(err) {
@@ -561,7 +595,7 @@ app.post('/api/account', function(req, res) {
 
 // retrieve all accounts
 app.get('/api/account', function(req, res) {
-	Account.find( { }, { "_id": false, "rooms": false, "msgQueue": false }, function(err, accounts) {
+	Account.find( { }, { "_id": false, "msgQueue": false }, function(err, accounts) {
 		if(err) return res.status(500).json({error: 'database failure'});
 		res.json(accounts);
 	});
@@ -577,7 +611,7 @@ app.get('/api/__server__/account', function(req, res) {
 
 // retrieve account by kakaoId
 app.get('/api/account/kakaoId/:id', function(req, res) {
-	Account.findOne( { kakaoId: req.params.id }, { "_id": false, "rooms": false, "msgQueue": false }, function(err, accounts) {
+	Account.findOne( { kakaoId: req.params.id }, { "_id": false, "msgQueue": false }, function(err, accounts) {
 		if(err) return res.status(500).json({error: 'database failure'});
 		if(accounts == null) return res.status(404).json({error: 'no such account'});
 		res.json(accounts);
@@ -621,7 +655,30 @@ var server = app.listen(port, function() {
 	console.log("Express server has started on port " + port);
 });
 
+// -------------------------------------------------------------------- //
 
+var io = require('socket.io').listen(server);
+
+var socket_ids = [];
+
+io.sockets.on('connection', function(socket) {
+	console.log('client connected.');
+	socket.emit('confirmConnection', {msg: 'Connected to Server'});
+	socket.on('verifyKakaoId', function(data) {
+		socket.set('kakaoId', data.kakaoId, function() {
+			var id = data.kakaoId;
+			socket_ids[id] = socket.id;
+			console.log('user: ' + id + ' connected to server.');
+
+			socket.on('disconnect', function(data) {
+				delete socket_ids[id];
+				console.log('user: ' + id + ' disconnected from server.');
+			});
+		});
+	});
+});
+
+// -------------------------------------------------------------------- //
 
 // helper functions
 function remove(array, element) {
@@ -633,7 +690,7 @@ var params = function(req){
   if(q.length>=2){
       q[1].split('&').forEach((item)=>{
            try {
-             result[item.split('=')[0]]=item.split('=')[1];
+             result[item.split('=')[0]]=decodeURIComponent(item.split('=')[1]);
            } catch (e) {
              result[item.split('=')[0]]='';
            }

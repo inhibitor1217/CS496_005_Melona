@@ -14,7 +14,6 @@ var accountSchema = new Schema({
 	experience: Number,         // Experience of this account.
 
 	// only used in server (hidden)
-	rooms: [String],
 	msgQueue: [[String]]
 
 });
