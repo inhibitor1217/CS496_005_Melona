@@ -24,6 +24,19 @@ var Account = require('./models/account');
 
 var enableRealTimeConnection = false;
 
+// kakao open room urls
+var chatRoomUrls = ['https://open.kakao.com/o/gyzlD3F',
+					'https://open.kakao.com/o/gXFoD3F',
+					'https://open.kakao.com/o/gXHqD3F',
+					'https://open.kakao.com/o/gF5sD3F',
+					'https://open.kakao.com/o/smGvD3F',
+					'https://open.kakao.com/o/sS7wD3F',
+					'https://open.kakao.com/o/gFlzD3F',
+					'https://open.kakao.com/o/gJrAD3F',
+					'https://open.kakao.com/o/gnqCD3F',
+					'https://open.kakao.com/o/glBDD3F' ];
+var chatRoomCount = 0;
+
 // post new quest
 app.post('/api/quest', function(req, res) {
 
@@ -184,7 +197,8 @@ app.put('/api/accept', function(req, res) {
 					}
 
 					if(enableRealTimeConnection) {
-						var data = quests.id;
+						var data = { questId: quests.id, roomURL: chatRoomUrls[chatRoomCount] };
+						chatRoomCount++;
 						if(socket_ids[quests.from] != undefined) {
 							io.sockets(socket_ids[quests.from]).emit('questAccepted', data);
 						}
@@ -396,6 +410,7 @@ app.put('/api/withdraw', function(req, res) {
 //
 // - update : Quest.state (Completed = 3)
 //            Account.uploadedQuests
+//            Account.completedQuests
 app.put('/api/complete', function(req, res) {
 	if(req.body.questId == undefined) {
 		res.json({error: "field \'questId\' is undefined"});
@@ -438,6 +453,7 @@ app.put('/api/complete', function(req, res) {
 					return;
 				}
 				accounts.uploadedQuests = remove(accounts.uploadedQuests, quests.id);
+				accounts.completedQuests.push(quests.id);
 				accounts.save(function(err) {
 					if(err) {
 						res.json({"result": 0}); // failed : db error
