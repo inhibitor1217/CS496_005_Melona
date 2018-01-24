@@ -17,24 +17,25 @@ mongoose.connect('mongodb://localhost/database');
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-var port = process.env.PORT || 8080;
+var port = 8080;
 
 var Quest   = require('./models/quest');
 var Account = require('./models/account');
+var Report  = require('./models/report');
 
-var enableRealTimeConnection = false;
+var enableRealTimeConnection = true;
 
 // kakao open room urls
 var chatRoomUrls = ['https://open.kakao.com/o/gyzlD3F',
 					'https://open.kakao.com/o/gXFoD3F',
 					'https://open.kakao.com/o/gXHqD3F',
-					'https://open.kakao.com/o/gF5sD3F',
+					'https://open.kakao.com/o/gF6sD3F',
 					'https://open.kakao.com/o/smGvD3F',
 					'https://open.kakao.com/o/sS7wD3F',
 					'https://open.kakao.com/o/gFlzD3F',
 					'https://open.kakao.com/o/gJrAD3F',
 					'https://open.kakao.com/o/gnqCD3F',
-					'https://open.kakao.com/o/glBDD3F' ];
+					'https://open.kakao.com/o/gIBDD3F' ];
 var chatRoomCount = 0;
 
 // post new quest
@@ -54,7 +55,7 @@ app.post('/api/quest', function(req, res) {
 		destination = req.body.destination;
 	}
 	if(req.body.coinReward != undefined) {
-		coinReward = req.body.coinReward;
+		coinReward = req.body.coinReward; 
 	}
 	if(req.body.expReward != undefined) {
 		expReward = req.body.expReward;
@@ -86,7 +87,7 @@ app.post('/api/quest', function(req, res) {
 		}
 		if(accounts.kakaoId != "admin" && accounts.coin < coinReward) {
 			res.json({result: 3}); // failed: not enough coin
-			return;
+			return; 
 		}
 
 		var quest = new Quest();
@@ -200,7 +201,14 @@ app.put('/api/accept', function(req, res) {
 						var data = { questId: quests.id, roomURL: chatRoomUrls[chatRoomCount] };
 						chatRoomCount++;
 						if(socket_ids[quests.from] != undefined) {
-							io.sockets(socket_ids[quests.from]).emit('questAccepted', data);
+							io.sockets.connected[socket_ids[quests.from]].emit('questAccepted', data);
+						} else {
+							if(msgQueue[quests.from] != undefined) msgQueue[quests.from].push({ msgType: 'questAccepted', msg: data });
+						}
+						if(socket_ids[quests.to] != undefined) {
+							io.sockets.connected[socket_ids[quests.to]].emit('questAccepted', data);
+						} else {
+							if(msgQueue[quests.to] != undefined) msgQueue[quests.to].push({ msgType: 'questAcccepted', msg: data });
 						}
 						res.json({result: 1}); // success
 					} else {
@@ -285,9 +293,11 @@ app.put('/api/giveup', function(req, res) {
 						return;
 					}
 					if(enableRealTimeConnection) {
-						var data = quests.id;
+						var data = { questId: quests.id };
 						if(socket_ids[quests.from] != undefined) {
-							io.sockets(socket_ids[quests.from]).emit('questGaveUp', data);
+							io.sockets.connected[socket_ids[quests.from]].emit('questGaveUp', data);
+						} else {
+							if(msgQueue[quests.from] != undefined) msgQueue[quests.from].push({ msgType: 'questGaveUp', msg: data });
 						}
 						res.json({"result": 1});
 					} else {
@@ -366,10 +376,12 @@ app.put('/api/withdraw', function(req, res) {
 							recAcc.save(function(err) {
 								if(err) return res.json({"result": 0});
 								if(enableRealTimeConnection) {
-									var data = quests.id;
+									var data = { questId: quests.id };
 									if(quests.to != "") {
 										if(socket_ids[quests.to] != undefined) {
-											io.sockets(socket_ids[quests.to]).emit('questWithdrawn', data);
+											io.sockets.connected[socket_ids[quests.to]].emit('questWithdrawn', data);
+										} else {
+											if(msgQueue[quests.to] != undefined) msgQueue[quests.to].push({ msgType: 'questWithdrawn', msg: data });
 										}
 									}
 									res.json({"result": 1});
@@ -381,10 +393,12 @@ app.put('/api/withdraw', function(req, res) {
 					}
 					else {
 						if(enableRealTimeConnection) {
-							var data = quests.id;
+							var data = { questId: quests.id };
 							if(quests.to != "") {
 								if(socket_ids[quests.to] != undefined) {
-									io.sockets(socket_ids[quests.to]).emit('questWithdrawn', data);
+									io.sockets.connected[socket_ids[quests.to]].emit('questWithdrawn', data);
+								} else {
+									if(msgQueue[quests.to] != undefined) msgQueue[quests.to].push({ msgType: 'questWithdrawn', msg: data });
 								}
 							}
 							res.json({"result": 1});
@@ -460,8 +474,11 @@ app.put('/api/complete', function(req, res) {
 						return;
 					}
 					if(enableRealTimeConnection) {
+						var data = { questId: quests.id };
 						if(socket_ids[quests.to] != undefined) {
-							io.sockets(socket_ids[quests.to]).emit('questCompleted', data);
+							io.sockets.connected[socket_ids[quests.to]].emit('questCompleted', data);
+						} else {
+							if(msgQueue[quests.to] != undefined) msgQueue[quests.to].push({ msgType: 'questCompleted', msg: data });
 						}
 						res.json({"result": 1});
 					} else {
@@ -707,6 +724,28 @@ app.delete('/api/account/kakaoId/:id', function(req, res) {
 	});
 });
 
+app.post('/api/report', function(req, res) {
+	var report = new Report();
+	report.title = req.body.title;
+	report.text = req.body.text;
+	report.contactInfo = req.body.contactInfo;
+
+	report.save(function(err) {
+		if(err) {
+			res.json({"result": 0});
+		} else {
+			res.json({"result": 1});
+		}
+	});
+});
+
+app.get('/api/__server__/reportAll', function(req, res) {
+	Report.find( { }, function(err, reports) {
+		if(err) return res.status(500).json({error: 'database failure'});
+		res.json(reports);
+	});
+});
+
 var server = app.listen(port, function() {
 	console.log("Express server has started on port " + port);
 });
@@ -716,20 +755,29 @@ var server = app.listen(port, function() {
 var io = require('socket.io').listen(server);
 
 var socket_ids = [];
+var msgQueue = [];
 
 io.sockets.on('connection', function(socket) {
 	console.log('client connected.');
 	socket.emit('confirmConnection', {msg: 'Connected to Server'});
 	socket.on('verifyKakaoId', function(data) {
-		socket.set('kakaoId', data.kakaoId, function() {
-			var id = data.kakaoId;
-			socket_ids[id] = socket.id;
-			console.log('user: ' + id + ' connected to server.');
+		var id = data.kakaoId;
+		socket.kakaoid = id;
+		socket_ids[id] = socket.id;
+		console.log('user: ' + id + ' connected to server.');
 
-			socket.on('disconnect', function(data) {
-				delete socket_ids[id];
-				console.log('user: ' + id + ' disconnected from server.');
-			});
+		if(msgQueue[id] != undefined) {
+			while(msgQueue[id].length > 0) {
+				var elem = msgQueue[id].shift();
+				socket.emit(elem.msgType, elem.msg);
+			}
+		} else {
+			msgQueue[id] = [];
+		}
+
+		socket.on('disconnect', function(data) {
+			delete socket_ids[id];
+			console.log('user: ' + id + ' disconnected from server.');
 		});
 	});
 });
