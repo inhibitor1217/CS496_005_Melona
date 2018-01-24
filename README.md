@@ -104,3 +104,6 @@ Available APIs:
   - GET  : /api/account/kakaoId/[id]
      - Retrieves an account which kakaoId is [id].
      - returns 404 (NOT FOUND) error with { "error": "no such account" } if the account with given kakaoId does not exist.
+     
+  - POST : /api/report
+     - Adds new report on database. Check models/report.js for details.
